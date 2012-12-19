@@ -20,7 +20,7 @@ doNewQuest(player(Location, XP, Health, Gold, Inventory)) :-
 
 /* Kill Quest */
 kill(questGiver(QGiverName, QuestName), player(QGiverLocation, XP, Health, Gold, Inventory), XPGain, GoldReward, [TargetName]) :- 
-	write('Accepted a kill quest named: ' + QuestName + ', Going to kill ' + TargetName + ' for ' + Gold + ' gold and ' + XPGain + ' XP gain.'),nl,
+	writef('%w%w%w%w%w%w%w%w%w', ['Accepted a kill quest named: ', QuestName, ', Going to kill ', TargetName, ' for ', Gold, ' gold and ', XPGain, ' XP gain.']),nl,
 	npc(TargetName, TargetPosition),
 	goTo(QGiverLocation, TargetPosition),
 	kill(TargetName),
@@ -29,14 +29,15 @@ kill(questGiver(QGiverName, QuestName), player(QGiverLocation, XP, Health, Gold,
 	doNewQuest(player(QGiverLocation, XP + XPGain, Health, Gold + GoldReward, Inventory)).
 	
 goTo(P1, P2) :-
-	write('Going from ' + P1 + ' to ' +  P2),nl.
+	writef('%w%w%w%w', ['Going from ', P1, ' to ',  P2]),nl.
 
 spy(Name) :-
-	write('Spying on ' + Name),nl.
+	writef('%w%w', ['Spying on ',  Name]),nl.
  
 kill(Name) :-
- 	write('Killed the ' + Name),nl.
+ 	writef('%w%w', ['Killed the ',  Name]),nl.
 	
 collectReward(Name) :-
-  	write('Get reward from ' + Name),nl.
+  	writef('%w%w', ['Collect reward from ',  Name]),nl.
  
+ start :- doNewQuest(player(hideout, 0, 100, 0, [])).
