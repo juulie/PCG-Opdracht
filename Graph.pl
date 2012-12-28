@@ -1,41 +1,46 @@
 /* Game Stats */
-quest('Kill The General', kill, 10, 100, [general]).
+quest('Kill The General', rebel, kill, 10, 100, [], [general]).
 
 npc(general,	bunker).
 npc(rebel,		hideout).
-npc(exMilitary, bar).
-npc(secondInCommand, compound).
-
-questGiver(rebel, 'Kill The General').
+npc(exMilitary, town).
 
 /*Knowledge Tree*/
 knownNPCs(player, 		[rebel, exMilitary]).
-knownNPCs(exMilitary, 	[secondInCommand]).
+knownNPCs(exMilitary, 	[general]).
 knownNPCs(rebel,		[]).
-knownNPCs(secondInCommand, 	[general]).
 
-/* Do new Quest, be done when we reach xp of 10 */
-doNewQuest(player(_, XP, _, _, _)) :-
-	XP =:= 10.
+play:-
+	b_getval(playerXp,			XP),
+	XP =:= 10,
+	writef('%w%w%w%w%w%w%w%w%w', ['Achieved xp of: ', XP, '. We\'re done!']),nl.
+	
+play:-
+	b_getval(playerLocation, Location),
+	npc(NPCName, Location),
+	quest(QuestName, NPCName, QuestType, XPGain, GoldReward, ItemRewardList,  List),
+	Quest =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
+	call(Quest),
+	play.
 
-doNewQuest(player(Location, XP, Health, Gold, Inventory)) :-
-	npc(Name, Location),
-	QGiver = questGiver(Name, QuestName),
-	quest(QuestName, QuestType, XPGain, GoldReward, List),
-	Quest =.. [QuestType| [QGiver, player(Location, XP, Health, Gold, Inventory), XPGain, GoldReward, List]],
-	call(Quest).
+play:-
+	b_getval(playerLocation, Location),
+	goTo(OtherLocation),
+	play.
+	
 	
 
 /* Kill Quest */
-kill(questGiver(QGiverName, QuestName), player(QGiverLocation, XP, Health, Gold, Inventory), XPGain, GoldReward, [TargetName]) :- 
-	writef('%w%w%w%w%w%w%w%w%w', ['Accepted a kill quest named: ', QuestName, ', Going to kill ', TargetName, ' for ', Gold, ' gold and ', XPGain, ' XP gain.']),nl,
+kill(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [TargetName]) :- 
+	writef('%w%w%w%w%w%w%w%w%w%w', ['Accepted a kill quest named: ', QuestName, ', Going to kill ', TargetName, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
 	findPerson([player], TargetName),nl,
 	npc(TargetName, TargetLocation),
-	goTo(QGiverLocation, TargetLocation),
+	b_getval(playerLocation, Location),
+	goTo(TargetLocation),
 	kill(TargetName),
-	goTo(TargetLocation, QGiverLocation),
-	collectReward(QGiverName),
-	doNewQuest(player(QGiverLocation, XP + XPGain, Health, Gold + GoldReward, Inventory)).
+	goTo(Location),
+	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+	
 	
 findPerson([Informant|_], Person) :-
 	knownNPCs(Informant, List),
@@ -53,9 +58,9 @@ findPerson([Informant|Others], Person) :-
 		writef('%w%w', ['We know ', Informant]); true).
 	
 	
-	
-goTo(P1, P2) :-
-	writef('%w%w%w%w', ['Going from ', P1, ' to ',  P2]),nl.
+goTo(P2) :-
+	writef('%w%w', ['Going to ', P2]),nl,
+	b_setval(playerLocation, 	P2).
 
 spy(Name) :-
 	writef('%w%w', ['Spying on ',  Name]),nl.
@@ -63,8 +68,15 @@ spy(Name) :-
 kill(Name) :-
  	writef('%w%w', ['Killed the ',  Name]),nl.
 	
-collectReward(Name) :-
-  	writef('%w%w', ['Collect reward from ',  Name]),nl.
+collectReward(Name, XPGain, GoldReward, ItemRewardList) :-
+  	writef('%w%w', ['Collect reward from ',  Name]),nl,
+	b_getval(playerXp,			XP),
+	b_getval(playerGold,		Gold),
+	b_getval(playerInventory, 	InventoryList),
+	b_setval(playerXp, 			XP + XPGain),
+	b_setval(playerGold,		Gold + GoldReward),
+	append(ItemRewardList, InventoryList, TotalList),
+	b_setval(playerInventory, 	TotalList).
 	
 
 /* Some handy methods */
@@ -75,4 +87,10 @@ listContainsItem([_|Tail], Item) :-
 	listContainsItem(Tail, Item).
 
  
- start :- doNewQuest(player(hideout, 0, 100, 0, [])).
+start :- 
+	b_setval(playerLocation, 	town),
+	b_setval(playerHp,			100),
+	b_setval(playerXp, 			0),
+	b_setval(playerGold,		0),
+	b_setval(playerInventory, 	[sword]),
+ 	play.
