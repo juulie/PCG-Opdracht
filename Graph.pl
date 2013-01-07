@@ -1,11 +1,11 @@
 /* Game Stats */
 
 /* Quests */
-quest('Kill The General', rebel, kill, 10, 100, [], [general]).
-quest('Kill The Military', rebel, kill, 10, 100, [], [exMilitary]).
+/* Quests are dynamic, that is, that they are removed from the database after they are completed*/
+quest('Kill The General', rebel, kill, [10, 100, []], [general]).
+quest('Kill The Military', rebel, kill, [10, 100, []], [exMilitary]).
 
-
-/* Locations */
+/* Locations and their neighbors*/
 location(town, [forest, city, river]).
 location(city, [hideout, town]).
 location(forest, [town, bunker]).
@@ -13,7 +13,7 @@ location(bunker, [forest]).
 location(hideout, [city]).
 location(river, [town, city]).
 
-/* NPC's */
+/* NPC's and their location */
 npc(general,	bunker).
 npc(rebel,		hideout).
 npc(exMilitary, town).
@@ -25,25 +25,22 @@ knownNPCs(rebel,		[]).
 
 play:-
 	b_getval(playerXp,			XP),
-	XP =:= 20,
+	XP =:= 10,
 	writef('%w%w%w', ['Achieved xp of: ', XP, '. We\'re done!']),nl.
 	
 play:-
 	b_getval(playerLocation, Location),
 	npc(NPCName, Location),
-	b_getval(playerCompletedQuests, CompletedQuests),
-	quest(QuestName, NPCName, QuestType, XPGain, GoldReward, ItemRewardList,  List),
-	\+ member(QuestName, CompletedQuests),
-	Quest =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
-	call(Quest),
-	append(CompletedQuests, QuestName, NewQuestList),
-	b_setval(playerCompletedQuests, NewQuestList),
+	quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List),
+	QuestCall =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
+	call(QuestCall),
+	/*retract(quest(QuestName, NPCName, QuestType, XPGain, GoldReward, ItemRewardList,  List)).*/
 	play.
 
 play:-
 	b_getval(playerLocation, Location),
 	closestQuest([Location], QuestName),
-	quest(QuestName, NPCName, _, _, _, _,  _),
+	quest(QuestName, NPCName, _, _, _),
 	npc(NPCName, NPCLocation),
 	goTo(NPCLocation),
 	play.
@@ -79,9 +76,7 @@ findPerson([Informant|Others], Person) :-
 		
 closestQuest([FromLocation|_], QuestName) :-
 	npc(NPCName, FromLocation),
-	quest(QuestName, NPCName, _, _, _, _,  _),
-	b_getval(playerCompletedQuests, CompletedQuests),
-	\+ member(QuestName, CompletedQuests).
+	quest(QuestName, NPCName, _, _, _).
 	
 closestQuest([FromLocation|Others], QuestName) :-
 	location(FromLocation, NeighborList),
@@ -119,13 +114,16 @@ isNotMember(List, Item) :-
 	
 isNotMember(List, Item).
 
- 
-start :- 
+setDefaultPlayer :-
+	writef('We start at town'),nl,
 	b_setval(playerLocation, 			town),
 	b_setval(playerHp,					100),
 	b_setval(playerXp, 					0),
 	b_setval(playerGold,				0),
 	b_setval(playerInventory, 			[sword]),
-	b_setval(playerCompletedQuests, 	[]),
+	b_setval(playerCompletedQuests, 	[]). 
+
+start :- 
+	setDefaultPlayer,
 	play.
 	
