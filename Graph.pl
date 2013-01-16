@@ -5,6 +5,7 @@
 quest('Kill The General', rebel, kill, [10, 100, []], [general]).
 quest('Kill The Military', rebel, kill, [10, 100, []], [exMilitary]).
 
+
 /* Locations and their neighbors*/
 location(town, [forest, city, river]).
 location(city, [hideout, town]).
@@ -34,7 +35,6 @@ play:-
 	quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List),
 	QuestCall =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
 	call(QuestCall),
-	/*retract(quest(QuestName, NPCName, QuestType, XPGain, GoldReward, ItemRewardList,  List)).*/
 	play.
 
 play:-
