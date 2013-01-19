@@ -2,9 +2,10 @@
 
 /* Quests */
 /* Quests are dynamic, that is, that they are removed from the database after they are completed*/
+:- dynamic quest/5.
+
 quest('Kill The General', rebel, kill, [10, 100, []], [general]).
 quest('Kill The Military', rebel, kill, [10, 100, []], [exMilitary]).
-
 
 /* Locations and their neighbors*/
 location(town, [forest, city, river]).
@@ -26,7 +27,7 @@ knownNPCs(rebel,		[]).
 
 play:-
 	b_getval(playerXp,			XP),
-	XP =:= 10,
+	XP =:= 20,
 	writef('%w%w%w', ['Achieved xp of: ', XP, '. We\'re done!']),nl.
 	
 play:-
@@ -35,6 +36,7 @@ play:-
 	quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List),
 	QuestCall =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
 	call(QuestCall),
+	retract(quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List)),
 	play.
 
 play:-
