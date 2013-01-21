@@ -153,7 +153,7 @@ findPerson(Person) :-
 	retract(knownNPCs(player, KnowledgeList)),
 	append(KnowledgeList, ReversedShortestPath, NewKnowledgeList),
 	list_to_set(NewKnowledgeList, Set),
-	assert(knownNPCs(player, Set)).
+	asserta(knownNPCs(player, Set)).
 	
 
 writePathToPerson([_]).
@@ -181,6 +181,10 @@ closestQuest([FromLocation|Others], QuestName) :-
 /* Actions */	
 goTo(P2) :-
 	writef('%w%w', ['Going to ', P2]),nl,
+	b_getval(playerXp, XP),
+	random_between(0, XP, RandomValue),
+	(RandomValue >= 40 ->
+		writef('Encountered enemies on the road'),nl;true),
 	b_setval(playerLocation, 	P2).
 
 spyOn(Name) :-
