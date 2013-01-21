@@ -12,6 +12,16 @@ quest('Escort crops delivery', farmer, escort, [15, 200, []], [crops, town]).
 quest('Deliver package', salesman, deliver, [8, 40, []], [healthPotion, oldMan]).
 quest('Escort rich guy', richGuy, escort, [15, 200, []], [richGuy, city]).
 quest('Deliver rich guy\'s package ', richGuy, deliver, [15, 200, []], [package, farmer]).
+quest('Collect 25 Shiny Red Apples', grocer, collect, [10, 0, [applePie, appleCider]], [apples, forest]).
+
+:- dynamic previousQuestType/1.
+previousQuestType(spy).
+questType(spy).
+questType(kill).
+questType(protect).
+questType(escort).
+questType(deliver).
+questType(collect).
 
 /* Locations and their neighbors*/
 location(town, [forest, city, river]).
@@ -23,207 +33,257 @@ location(river, [town, city]).
 
 /* NPC's and their location, these are also dynamic, as NPC's can get killed*/
 :- dynamic npc/2.
-npc(general,	bunker).
-npc(rebel,		hideout).
+npc(general, bunker).
+npc(rebel, hideout).
 npc(exMilitary, town).
-npc(farmer,		forest).
-npc(salesman,	town).
-npc(oldMan,		town).
-npc(oldLady,	town).
-npc(richGuy,	town).
-npc(corporal,	bunker).
+npc(farmer, forest).
+npc(salesman, town).
+npc(oldMan, town).
+npc(oldLady, town).
+npc(richGuy, town).
+npc(grocer, town).
+npc(corporal, bunker).
 
 /* Knowledge Tree, dynamic because this information changes overtime */
 :- dynamic knownNPCs/2.
-knownNPCs(player, 		[oldMan, rebel, exMilitary]).
-knownNPCs(exMilitary, 	[corporal]).
-knownNPCs(corporal, 	[general]).
-knownNPCs(rebel,		[]).
-knownNPCs(richGuy,		[salesman, farmer]).
-knownNPCs(salesman,		[oldMan, farmer, richGuy]).
-knownNPCs(oldMan,		[oldLady, farmer]).
-knownNPCs(oldLady,		[]).
-knownNPCs(farmer,		[]).
+knownNPCs(player, [oldMan, rebel, exMilitary, grocer]).
+knownNPCs(exMilitary, [corporal]).
+knownNPCs(corporal, [general]).
+knownNPCs(rebel, []).
+knownNPCs(richGuy, [salesman, farmer]).
+knownNPCs(salesman, [oldMan, farmer, richGuy]).
+knownNPCs(oldMan, [oldLady, farmer]).
+knownNPCs(oldLady, []).
+knownNPCs(farmer, []).
 
 play:-
-	b_getval(playerXp,			XP),
-	XP >= 75,
-	writef('%w%w%w', ['Achieved xp of: ', XP, '. We\'re done!']),nl.
-	
-play:-
-	b_getval(playerLocation, Location),
-	npc(NPCName, Location),
-	quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List),
-	QuestCall =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList,  List],
-	call(QuestCall),
-	nl,
-	retract(quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList],  List)),
-	play.
+b_getval(playerXp, XP),
+XP >= 100,
+writef('%w%w%w', ['Achieved xp of: ', XP, '. We\'re done!']),nl.
 
 play:-
-	b_getval(playerLocation, Location),
-	closestQuest([Location], QuestName),
-	quest(QuestName, NPCName, _, _, _),
-	npc(NPCName, NPCLocation),
-	goTo(NPCLocation),nl,
-	play.
-	
-	
+b_getval(playerLocation, Location),
+npc(NPCName, Location),
+quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList], List),
+QuestCall =.. [QuestType, QuestName, NPCName, XPGain, GoldReward, ItemRewardList, List],
+call(QuestCall),
+nl,
+retract(quest(QuestName, NPCName, QuestType, [XPGain, GoldReward, ItemRewardList], List)),
+play.
+
+play:-
+b_getval(playerLocation, Location),
+closestQuest([Location], QuestName),
+quest(QuestName, NPCName, _, _, _),
+npc(NPCName, NPCLocation),
+goTo(NPCLocation),nl,
+play.
+
+
 
 /* Quests */
-kill(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [TargetName]) :- 
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a kill quest named: ', QuestName, ' from ', QGiverName,'. Going to kill ', TargetName, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	findPerson(TargetName),
-	npc(TargetName, TargetLocation),
-	b_getval(playerLocation, Location),
-	goTo(TargetLocation),
-	kill(TargetName),
-	goTo(Location),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
-	
+kill(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [TargetName]) :-
+writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a kill quest named: ', QuestName, ' from ', QGiverName,'. Going to kill ', TargetName, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+findPerson(TargetName),
+npc(TargetName, TargetLocation),
+b_getval(playerLocation, Location),
+goTo(TargetLocation),
+kill(TargetName),
+goTo(Location),
+setPreviousQuestType(kill),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+
 spy(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [TargetName]) :-
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a spy quest named: ', QuestName, ' from ', QGiverName,'. Going to spy on ', TargetName, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	findPerson(TargetName),
-	npc(TargetName, TargetLocation),
-	b_getval(playerLocation, Location),
-	goTo(TargetLocation),
-	spyOn(TargetName),
-	goTo(Location),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a spy quest named: ', QuestName, ' from ', QGiverName,'. Going to spy on ', TargetName, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+findPerson(TargetName),
+npc(TargetName, TargetLocation),
+b_getval(playerLocation, Location),
+goTo(TargetLocation),
+spyOn(TargetName),
+goTo(Location),
+setPreviousQuestType(spy),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
 
 protect(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [Danger]) :-
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a protect quest named: ', QuestName, ' from ', QGiverName,'. Have to protect him from ', Danger, '. We do this for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	protect(QGiverName, Danger),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a protect quest named: ', QuestName, ' from ', QGiverName,'. Have to protect him from ', Danger, '. We do this for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+protect(QGiverName, Danger),
+setPreviousQuestType(protect),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
 
 escort(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [Escortee, Destination]) :-
-	npc(Escortee, EscorteeLocation),
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted an escort quest named: ', QuestName, ' from ', QGiverName,'. Going to escort ', Escortee, ' to ', Destination, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	goTo(Destination),
-	retract(npc(Escortee, EscorteeLocation)),
-	asserta(npc(Escortee, Destination)),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
-	
+npc(Escortee, EscorteeLocation),
+writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted an escort quest named: ', QuestName, ' from ', QGiverName,'. Going to escort ', Escortee, ' to ', Destination, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+goTo(Destination),
+retract(npc(Escortee, EscorteeLocation)),
+asserta(npc(Escortee, Destination)),
+setPreviousQuestType(escort),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+
 escort(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [Escortee, Destination]) :-
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted an escort quest named: ', QuestName, ' from ', QGiverName,'. Going to escort ', Escortee, ' to ', Destination, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	goTo(Destination),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
-	
+writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted an escort quest named: ', QuestName, ' from ', QGiverName,'. Going to escort ', Escortee, ' to ', Destination, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+goTo(Destination),
+setPreviousQuestType(escort),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+
 deliver(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [Package, Receiver]) :-
-	writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a delivery quest named: ', QuestName, ' from ', QGiverName,'. Going to deliver ', Package, ' to ', Receiver, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
-	npc(Receiver, ReceiverLocation),
-	goTo(ReceiverLocation),
-	collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
-	
+writef('%w%w%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a delivery quest named: ', QuestName, ' from ', QGiverName,'. Going to deliver ', Package, ' to ', Receiver, ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items:', ItemRewardList]),nl,
+npc(Receiver, ReceiverLocation),
+goTo(ReceiverLocation),
+setPreviousQuestType(deliver),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+
+collect(QuestName, QGiverName, XPGain, GoldReward, ItemRewardList, [Collect, CollectLocation]) :-
+writef('%w%w%w%w%w%w%w%w%w%w%w%w', ['Accepted a collect quest named: ', QuestName, ', Going to collect ', Collect, ' from the ', CollectLocation,  ' for ', GoldReward, ' gold, ', XPGain, ' XP gain and these items: ', ItemRewardList]),nl,
+b_getval(playerLocation, Location),
+goTo(CollectLocation),
+collect(Collect),
+goTo(Location),
+setPreviousQuestType(collect),
+collectReward(QGiverName, XPGain, GoldReward, ItemRewardList).
+
+
 /* Consult tree's, these do a breath first search in a specific tree */
 /*findPerson([Informant|_], Person) :-
-	knownNPCs(Informant, List),
-	member(Person, List),
-	writef('%w%w%w', [Informant, ' knows whereabouts of ', Person]),
-	(Informant \== player ->
-		nl,writef('%w%w', ['We know ', Informant]);true).
+knownNPCs(Informant, List),
+member(Person, List),
+writef('%w%w%w', [Informant, ' knows whereabouts of ', Person]),
+(Informant \== player ->
+nl,writef('%w%w', ['We know ', Informant]);true).
 
 findPerson([Informant|Others], Person) :-
-	knownNPCs(Informant, List),
-	append(Others, List, NewList),
-	list_to_set(NewList, Set),
-	findPerson([Connection|Set], Person),
-	(Informant \== player ->
-		writef('%w%w', [' via ', Connection]),nl,
-		writef('%w%w', ['We know ', Connection]); true).*/
-		
+knownNPCs(Informant, List),
+append(Others, List, NewList),
+list_to_set(NewList, Set),
+findPerson([Connection|Set], Person),
+(Informant \== player ->
+writef('%w%w', [' via ', Connection]),nl,
+writef('%w%w', ['We know ', Connection]); true).*/
+
 findPerson(Person, Path, Length) :-
-	Person == player,
-	Length is 0,
-	Path = [].
-		
+Person == player,
+Length is 0,
+Path = [].
+
 findPerson(Person, Path, Length) :-
-	knownNPCs(Informant, List),
-	member(Person, List),
-	!,
-	findPerson(Informant, NewPath, NewLength),
-	Length is NewLength + 1,
-	Path = [Person | NewPath].
+knownNPCs(Informant, List),
+member(Person, List),
+!,
+findPerson(Informant, NewPath, NewLength),
+Length is NewLength + 1,
+Path = [Person | NewPath].
 
 findPerson(Person) :-
-	findall([Path, Length], findPerson(Person, Path, Length), PathList),
-	predsort(pathComparison, PathList, [[ReversedShortestPath | _]|_]),
-	reverse(ReversedShortestPath, ShortestPath),
-	writePathToPerson(ShortestPath),
-	retract(knownNPCs(player, KnowledgeList)),
-	append(KnowledgeList, ReversedShortestPath, NewKnowledgeList),
-	list_to_set(NewKnowledgeList, Set),
+findall([Path, Length], findPerson(Person, Path, Length), PathList),
+predsort(pathComparison, PathList, [[ReversedShortestPath | _]|_]),
+reverse(ReversedShortestPath, ShortestPath),
+writePathToPerson(ShortestPath),
+retract(knownNPCs(player, KnowledgeList)),
+append(KnowledgeList, ReversedShortestPath, NewKnowledgeList),
+list_to_set(NewKnowledgeList, Set),
 	asserta(knownNPCs(player, Set)).
-	
+
 
 writePathToPerson([_]).
 
 writePathToPerson([Current, Next|Rest]) :-
-	(Current \== player ->
-		writef('%w%w%w%w', ['We know ', Next, ' via ', Current]),nl;
-		writef('%w%w', ['We know ', Next]),nl),
-	writePathToPerson([Next|Rest]).
+(Current \== player ->
+writef('%w%w%w%w', ['We know ', Next, ' via ', Current]),nl;
+writef('%w%w', ['We know ', Next]),nl),
+writePathToPerson([Next|Rest]).
 
 
 pathComparison(Delta, [_, Length1], [_, Length2]) :-
-	compare(Delta, Length1, Length2).
-		
+compare(Delta, Length1, Length2).
+
+setPreviousQuestType(QuestType) :-
+previousQuestType(X),
+retract(previousQuestType(X)),
+asserta(previousQuestType(QuestType)).
+
+getArgumentsForQuestType(Type, List) :-
+(Type == kill -> List = [grocer] ; true),
+(Type == spy -> List = [grocer] ; true),
+(Type == protect -> List = [bandits] ; true),
+(Type == escort -> List = [grocer, grocery] ; true),
+(Type == deliver -> List = [bread, grocer] ; true),
+(Type == collect -> List = [fish, river] ; true).
+
+
+generateQuest(ForLocation) :-
+previousQuestType(Type2),
+questType(Type), 
+Type \= Type2,
+writef('%w%w', ['quest type: ', Type]),nl,
+getArgumentsForQuestType(Type, List),
+writef('%w%w', ['arguments: ', List]),nl,
+Dude = dynamicQuestGiver,
+writef('%w%w', ['dude: ', Dude]),nl,
+asserta(npc(Dude, ForLocation)),
+asserta(quest('do some dynamically generated stuff', Dude, Type, [10, 100, []], List)).
+
 closestQuest([FromLocation|_], QuestName) :-
-	npc(NPCName, FromLocation),
-	quest(QuestName, NPCName, _, _, _).
-	
+npc(NPCName, FromLocation),
+quest(QuestName, NPCName, _, _, _).
+
 closestQuest([FromLocation|Others], QuestName) :-
-	location(FromLocation, NeighborList),
-	append(Others, NeighborList, NewList),
-	list_to_set(NewList, Set),
-	closestQuest(Set, QuestName).
-	
-/* Actions */	
+location(FromLocation, NeighborList),
+append(Others, NeighborList, NewList),
+list_to_set(NewList, Set),
+closestQuest(Set, QuestName).
+
+/* Actions */
 goTo(P2) :-
-	writef('%w%w', ['Going to ', P2]),nl,
+	b_getval(playerLocation, P2),
+	writef('%w%w', ['We are already at ', P2]),nl.
+
+goTo(P2) :-
+writef('%w%w', ['Going to ', P2]),nl,
 	b_getval(playerXp, XP),
 	random_between(0, XP, RandomValue),
 	(RandomValue >= 40 ->
 		writef('Encountered enemies on the road'),nl;true),
-	b_setval(playerLocation, 	P2).
+b_setval(playerLocation, P2).
 
 spyOn(Name) :-
-	writef('%w%w', ['Spying on ',  Name]),nl.
- 
+writef('%w%w', ['Spying on ', Name]),nl.
+
 kill(Name) :-
- 	writef('%w%w', ['Killed the ',  Name]),nl,
-	retract(npc(Name, _)).
-	
+  writef('%w%w', ['Killed the ', Name]),nl,
+retract(npc(Name, _)).
+
+collect(Name) :-
+writef('%w%w', ['Collected ', Name]),nl.
+
 protect(Name, Danger) :-
- 	writef('%w%w%w%w', ['Protecting ',  Name, ' from ', Danger]),nl.
-	
+  writef('%w%w%w%w', ['Protecting ', Name, ' from ', Danger]),nl.
+
 collectReward(Name, XPGain, GoldReward, ItemRewardList) :-
-  	writef('%w%w', ['Collect reward from ',  Name]),nl,
-	b_getval(playerXp,			XP),
-	b_getval(playerGold,		Gold),
-	b_getval(playerInventory, 	InventoryList),
-	NewXP is XP + XPGain,
-	b_setval(playerXp, 			NewXP),
-	NewGold is Gold + GoldReward,
-	b_setval(playerGold,		NewGold),
-	append(ItemRewardList, InventoryList, TotalList),
-	b_setval(playerInventory, 	TotalList).
-	
+   writef('%w%w', ['Collect reward from ', Name]),nl,
+b_getval(playerXp,  XP),
+b_getval(playerGold,	Gold),
+b_getval(playerInventory, InventoryList),
+NewXP is XP + XPGain,
+b_setval(playerXp, NewXP),
+NewGold is Gold + GoldReward,
+b_setval(playerGold,	NewGold),
+append(ItemRewardList, InventoryList, TotalList),
+b_setval(playerInventory, TotalList).
+
 
 /* Some handy methods */
 
 setDefaultPlayer :-
-	writef('We start at town'),nl,
-	b_setval(playerLocation, 			town),
-	b_setval(playerHp,					100),
-	b_setval(playerXp, 					0),
-	b_setval(playerGold,				0),
-	b_setval(playerInventory, 			[]),
-	b_setval(playerCompletedQuests, 	[]). 
+writef('We start at town'),nl,
+b_setval(playerLocation, town),
+b_setval(playerHp,	100),
+b_setval(playerXp, 0),
+b_setval(playerGold,	0),
+b_setval(playerInventory, []),
+b_setval(playerPreviousQuest, 0),
+b_setval(playerCompletedQuests, []).
 
-start :- 
-	setDefaultPlayer,
-	play,
-	abolish(knownNPCs/2),
-	abolish(quest/5).
-	
+start :-
+setDefaultPlayer,
+play,
+abolish(knownNPCs/2),
+abolish(quest/5).
